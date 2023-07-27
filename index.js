@@ -12,7 +12,6 @@ const cookieparser = require("cookie-parser")
 const { createTokens, verifyToken, docedToken } = require("./JWT");
 
 //const Cookies = require("js-cookie")
-const fileUpload = require("express-fileupload");
 const server = http.createServer(app);
 const io = require("socket.io")(server);
 
@@ -27,20 +26,35 @@ const port = 8180;
 
 
 
-// const os = require('os')
-//var escapeHtml = require('escape-html');
-
 const db = mysql.createPool({
-  host: '127.0.0.1',
-  user: `root`,
-  password: '',
-  database: 'gunmarkte',
-  timezone: 'utc',
+  host: 'freemarkate.com',
+  user: 'u840548398_gunmarkte',
+  password: 'Gunmarkte775227593',
+  database: 'u840548398_gunmarkte',
+  // port:3306,
+  // timezone: 'utc',
 });
+
 app.use(cookieparser());
 app.use(cors());
 app.use(express.json());
 //app.use(fileUpload());
+app.set(port)
+
+server.listen(port, () => {
+  const testFolder = './upload/';
+    const post = "INSERT INTO userscont (userName,email,password,passwordconfrg,phone,pirthDay,prithMath,prithYurs,DATATIM) VALUES ( 'userName' ,'email','hash','passwordconfr','phone','pirthDay','prithMath', 'prithYurs',CURRENT_DATE())";
+    // const post = "SELECT * FROM hamzhinpus ";
+  
+    db.query(post,(err,reslt)=>{
+      console.log(reslt)
+  })
+  
+  fs.readdirSync(testFolder).forEach(file => {
+    console.log(file);
+  });
+  console.log(`server running at http://10.10.59.3:${port}/`);
+});
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const dir = `upload/`;
@@ -114,20 +128,14 @@ app.get('/api/get', (req, res) => {
 app.post('/api/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
     console.log(password)
-   
     const user = "SELECT * FROM userscont WHERE email='" + email + "'";
-
     db.query(user, (err, result) => {
       if (!err) {
-
         const dbPassword = result[0].password;
         //  console.log(dbPassword);
         const accessToken = createTokens(result[0]);
         //res.cookie('token', accessToken, { httpOnly: true });
-
-
         bcrypt.compare(password, dbPassword).then((match, error) => {
           if (!match) {
             res.sendStatus(400)
@@ -137,12 +145,10 @@ app.post('/api/login', (req, res) => {
             res.send({ success: true, result, accessToken }).status(200);
           }
         });
-
         var verifyOptions = {
           maxAge: "30d",
           algorithm: ["RS256"]
         };
-
         var publickey = fs.readFileSync('./Public.Key', 'utf8');
         jwt.verify(accessToken, publickey, { httpOnly: true, sameSite: 'none', maxAge: 24 * 60 * 6 * 1000 }, (err, doced) => {
           {
@@ -150,31 +156,17 @@ app.post('/api/login', (req, res) => {
               sessions.userId = doced.userId;
             sessions.email = doced.email
           };
-
           console.log(JSON.stringify(doced));
         });
-
-
-
       } else {
         res.send({ success: true }).status(401)   ;
       }
-
-      //console.log(accessToken);
-
     });
-
-
 });
 
-
-
-
 function isAuthenticated(req, res, next) {
-
   //const token = req.session.user;
   req.session.user = sessions
-
   if (req.session.user) next()
   else next('route')
 }
@@ -197,59 +189,28 @@ app.get("/api/profil", isAuthenticated, (req, res) => {
     if (result) {
       // console.log(result)
       res.send(result).status(200);
-      const http = 'http://10.10.59.7:8180/upload/';
     } else {
       console.log(err)
     }
   });
-
-  /*res.send([{ 
-    id:1,
-    titel: "lern ras",  
-    userSession ,
-    }])*/
-  //console.log(JSON.stringify(verified));
-
 });
 app.get("/api/profilimag", isAuthenticated, (req, res) => {
-
-
-
-
-
   const userSession = req.session.user;
-
-
   if (!userSession) {
     res.status(401).send('Invalid session');
     console.log('Invalid session');
   }
-
   const user = "SELECT imagposts.image,imagposts.idimgpost,imagposts.idLinkimag,imagposts.filesav FROM imagposts INNER JOIN posts ON imagposts.idLinkimag = posts.linkimag WHERE posts.User='" + userSession.userId + "'";
-  //const user = "SELECT * FROM imagposts  INNER JOIN posts  posts.linkimag= imagposts.idLinkimag  WHERE posts.User='" + userSession.userId + "'";
-
-
   db.query(user, (err, result) => {
     if (result) {
-
-
       //      console.log(result)
       res.send(result).status(200);
-
-
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
       console.log(err)
     }
-
   });
-
-
-
-
-
 });
 
 
@@ -291,23 +252,14 @@ app.put("/api/upadtuserimag", isAuthenticated, uploads.single('imagupdatuser'), 
       res.sendStatus(200);
       console.log(result);
       const previousimag = req.body.previousimag;
-
-
       if (previousimag.length !== 0) {
         fs.unlink(`upload/${previousimag}`, (err) => {
           if (err) throw err;
           console.log('path/file.txt was deleted');
         })
       }
-
     }
   });
-
-  const success = true;
-
-
-
-
 });
 
 
@@ -317,84 +269,94 @@ app.post("/api/insertviewuser", (req, res) => {
   const id_postuser_target = req.body.idpostwatch
   const id_user = req.body.iduser
   const userName = req.body.userName
-
-
   console.log(userName, id_postuser_target, id_user);
-
   const sqlInsert = "INSERT INTO view_user(id_viewuser,userNameview,Timmaint_viewuser,Timday_viewuser,id_countuser_targe) VALUES ('" + id_user + "','" + userName + "',CURRENT_TIME(),CURRENT_DATE(),'" + id_postuser_target + "' )"
   db.query(sqlInsert, (err, result) => {
     console.log(result);
     res.sendStatus(200);
   })
-
-
 });
 
 app.get('/api/viewuser', (req, res) => {
-
   const view = "SELECT * FROM view_user ";
-
-
   db.query(view, (err, result) => {
     if (result) {
-
       // console.log(result);
       //console.log(postpblec);
       res.send(result).status(200);
       console.log(result);
-
-      const http = 'http://10.10.59.7:8180/upload/';
-
-
     } else {
       console.log(err)
     }
-
   });
 })
 
 
 
 app.get('/api/usersviewfrind', isAuthenticated, (req, res) => {
-
   const userSession = req.session.user;
   if (!userSession) {
     res.status(401).send('Invalid session');
     console.log('Invalid session');
   }
-
-
   const view = "SELECT * FROM view_user INNER JOIN userscont ON userscont.id=view_user.id_countuser_targe  WHERE view_user.id_viewuser='" + userSession.userId + "' ";
   db.query(view, (err, result) => {
     if (result) {
       res.send(result).status(200);
       // console.log(result);
-
-      const http = 'http://10.10.59.7:8180/upload/';
-
-
     } else {
       console.log(err)
     }
-
   });
 });
 app.get('/api/viewfrindthusermy', isAuthenticated, (req, res) => {
-
   const userSession = req.session.user;
   if (!userSession) {
     res.status(401).send('Invalid session');
     console.log('Invalid session');
   }
-
-
   const view = "SELECT * FROM view_user INNER JOIN userscont ON userscont.id=view_user.id_viewuser  WHERE  view_user.id_countuser_targe='" + userSession.userId + "' ";
   db.query(view, (err, result) => {
     if (result) {
       res.send(result).status(200);
       // console.log(result);
+    } else {
+      console.log(err)
+    }
+  });
+});
 
-      const http = 'http://10.10.59.7:8180/upload/';
+
+app.get('/api/viewpostpostsuser', isAuthenticated, (req, res) => {
+  const userSession = req.session.user;
+  if (!userSession) {
+    res.status(401).send('Invalid session');
+    console.log('Invalid session');
+  }
+  const view = "SELECT * FROM view_post INNER JOIN posts ON posts.idpost=view_post.id_postuser_target WHERE posts.User='" + userSession.userId + "'";
+  db.query(view, (err, result) => {
+    if (result) {
+      res.send(result).status(200);
+      // console.log(result);
+    } else {
+      console.log(err)
+    }
+  });
+});
+
+
+app.get('/api/viewpostpostfrind', isAuthenticated, (req, res) => {
+  const userSession = req.session.user;
+  if (!userSession) {
+    res.status(401).send('Invalid session');
+    console.log('Invalid session');
+  }
+  const view = "SELECT posts.idpost,posts.Saction,posts.Kind,posts.usecase,posts.country,posts.season,posts.pattren,posts.Collar,posts.stylePost,posts.colorPost,posts.codcountry,posts.Cdlass,posts.Yurs,posts.City,posts.Done,posts.Description,posts.Prcado,posts.Price,posts.Phone,posts.linkimag,posts.DATEDAY,view_post.id_user,view_post.userName AS userNamemy , userscont.userName, userscont.id, userscont.email,userscont.phone FROM posts INNER JOIN view_post ON view_post.id_postuser_target=posts.idpost LEFT JOIN userscont ON userscont.id=posts.User WHERE view_post.id_user='" + userSession.userId + "' ";
+  db.query(view, (err, result) => {
+    if (result) {
+      res.send(result).status(200);
+      // console.log(result);
+
 
 
     } else {
@@ -406,23 +368,16 @@ app.get('/api/viewfrindthusermy', isAuthenticated, (req, res) => {
 
 
 app.get('/api/usersfollowerfrind', isAuthenticated, (req, res) => {
-
   const userSession = req.session.user;
   if (!userSession) {
     res.status(401).send('Invalid session');
     console.log('Invalid session');
   }
-
-
   const view = "SELECT * FROM follower INNER JOIN userscont ON userscont.id = follower.id_usertyp_follower  WHERE follower.id_userfollower='" + userSession.userId + "' ";
   db.query(view, (err, result) => {
     if (result) {
       res.send(result).status(200);
       // console.log(result);
-
-      const http = 'http://10.10.59.7:8180/upload/';
-
-
     } else {
       console.log(err)
     }
@@ -437,40 +392,21 @@ app.get('/api/followerfrindthusermy', isAuthenticated, (req, res) => {
     res.status(401).send('Invalid session');
     console.log('Invalid session');
   }
-
-
   const view = "SELECT * FROM follower INNER JOIN userscont ON userscont.id=follower.id_userfollower  WHERE  follower.id_usertyp_follower='" + userSession.userId + "' ";
   db.query(view, (err, result) => {
     if (result) {
       res.send(result).status(200);
       // console.log(result);
-
-      const http = 'http://10.10.59.7:8180/upload/';
-
-
     } else {
       console.log(err)
     }
-
   });
 });
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 app.get("/api/getusercoun", (req, res) => {
   try {
-
     const user = "SELECT * FROM userscont "
     db.query(user, (err, result) => {
       if (result) {
@@ -478,8 +414,6 @@ app.get("/api/getusercoun", (req, res) => {
       } else {
         console.log(err)
       }
-
-
     });
   } catch (err) {
     console.log(err);
@@ -493,30 +427,18 @@ app.get("/api/getusercoun", (req, res) => {
 
 
 app.get('/api/favorepostpostsusers', isAuthenticated, (req, res) => {
-
   const userSession = req.session.user;
   if (!userSession) {
     res.status(401).send('Invalid session');
     console.log('Invalid session');
   }
   const view = "SELECT * FROM favret INNER JOIN posts ON posts.idpost=favret.idfavret WHERE posts.User='" + userSession.userId + "' ";
-
-
   db.query(view, (err, result) => {
     if (result) {
-
-      // console.log(result);
-      //console.log(postpblec);
       res.send(result).status(200);
-      // console.log(result);
-
-      const http = 'http://10.10.59.7:8180/upload/';
-
-
     } else {
       console.log(err)
     }
-
   });
 });
 
@@ -527,75 +449,20 @@ app.get('/api/favorepostsfrind', isAuthenticated, (req, res) => {
     console.log('Invalid session');
   }
   const iduser = req.body.idpost
-
   const view = "SELECT posts.idpost,posts.usecase,posts.country,posts.codcountry,posts.Saction,posts.User,posts.season,posts.pattren,posts.Collar,posts.stylePost,posts.colorPost,posts.Kind,posts.TimMinutes,posts.Cdlass,posts.Yurs,posts.City,posts.Done,posts.Description,favret.idfavorit,favret.idfavret,posts.Prcado,posts.Price,posts.Phone,posts.linkimag,posts.DATEDAY,favret.iduser,favret.timlike_day,favret.timlikuser,favret.userName AS userNamemy , userscont.userName, userscont.id, userscont.email,userscont.phone FROM posts INNER JOIN favret ON favret.idfavret=posts.idpost LEFT JOIN userscont ON userscont.id=posts.User WHERE favret.iduser='" + userSession.userId + "' ";
-
-
   db.query(view, (err, result) => {
     if (result) {
-
-      // console.log(result);
-      //console.log(postpblec);
       res.send(result).status(200);
-      //     console.log(result);
-
-      const http = 'http://10.10.59.7:8180/upload/';
-
-
     } else {
       console.log(err)
     }
-
   });
 })
 
 
 
 
-app.get('/api/viewpostpostsuser', isAuthenticated, (req, res) => {
-  const userSession = req.session.user;
-  if (!userSession) {
-    res.status(401).send('Invalid session');
-    console.log('Invalid session');
-  }
-  const view = "SELECT * FROM view_post INNER JOIN posts ON posts.idpost=view_post.id_postuser_target WHERE posts.User='" + userSession.userId + "'";
 
-  db.query(view, (err, result) => {
-    if (result) {
-      res.send(result).status(200);
-      // console.log(result);
-      const http = 'http://10.10.59.7:8180/upload/';
-    } else {
-      console.log(err)
-    }
-  });
-});
-
-
-app.get('/api/viewpostpostfrind', isAuthenticated, (req, res) => {
-
-  const userSession = req.session.user;
-  if (!userSession) {
-    res.status(401).send('Invalid session');
-    console.log('Invalid session');
-  }
-
-
-  const view = "SELECT posts.idpost,posts.Saction,posts.Kind,posts.usecase,posts.country,posts.season,posts.pattren,posts.Collar,posts.stylePost,posts.colorPost,posts.codcountry,posts.Cdlass,posts.Yurs,posts.City,posts.Done,posts.Description,posts.Prcado,posts.Price,posts.Phone,posts.linkimag,posts.DATEDAY,view_post.id_user,view_post.userName AS userNamemy , userscont.userName, userscont.id, userscont.email,userscont.phone FROM posts INNER JOIN view_post ON view_post.id_postuser_target=posts.idpost LEFT JOIN userscont ON userscont.id=posts.User WHERE view_post.id_user='" + userSession.userId + "' ";
-  db.query(view, (err, result) => {
-    if (result) {
-      res.send(result).status(200);
-      // console.log(result);
-
-      const http = 'http://10.10.59.7:8180/upload/';
-
-
-    } else {
-      console.log(err)
-    }
-
-  });
-});
 
 
 
@@ -670,6 +537,13 @@ app.post("/api/insertpost", (req, res) => {
   });
 
 
+  // const tasks = "INSERT INTO posts (Saction,Kind,Cdlass,usecase,season,pattren,Collar,stylePost,colorPost,Yurs,country,codcountry,City,Done,Description,Prcado,Price,Phone,linkimag,accessPost,User,TimMinutes,DATEDAY) VALUES ('Saction,Kind,Cdlass,usecase,season,pattren,Collar,stylePost,colorPost,Yurs,country,codcountry,City,Done,Description,Prcado,Price,Phone,linkimag,accessPost,User,TimMinutes,DATEDAY,CURRENT_TIME(),CURRENT_DATE())";
+  // db.query(tasks, (err, result) => {
+  //   //if (err) throw err;
+  //   console.log(err);
+  //   console.log(result);
+  //   res.sendStatus(200);
+  // });
 
 
 
@@ -704,50 +578,21 @@ app.post("/api/insertpostimag", uploads.any('profile'), (req, res) => {
 
       res.sendStatus(200);
       console.log(JSON.stringify(err,data));
-      const http = 'http://10.10.59.7:8180/upload/';
 
     });
   })
 });
 app.post("/api/insertpostimagsingl", uploads.single('profile'), (req, res) => {
-
-
   const idLinkimag = req.body.idLinkimag;
-
-
-  console.log(`file name '${idLinkimag}'`)
-
-
+  console.log(`file name ${idLinkimag}`)
   console.log(req.files.filename);
-
-
-
-
   db.query('INSERT INTO imagposts(image,idLinkimag,filesav) VALUES ("' + req.file.filename + '","' + idLinkimag + '","upload")', function (err, data) {
-
     if (err) throw err;
-
-
-    console.log(JSON.stringify(err));
-    const http = 'http://10.10.59.7:8180/upload/';
-
+    console.log(JSON.stringify(err))
   });
-
-
-
-
-
-
-
-
-
   res.send(result).status(200);
-
-
-
 });
 app.put("/api/insertpostupadte", (req, res) => {
-
   const Saction = req.body.Saction;
   const Cdlass = req.body.Cdlass;
   const Prcant = req.body.Prcant;
@@ -760,7 +605,6 @@ app.put("/api/insertpostupadte", (req, res) => {
   const Prcado = req.body.Prcado;
   const User = req.body.User;
   const Phone = req.body.Phone;
-
   const country = req.body.country;
   const codcountry = req.body.codcountry;
   const usecase = req.body.usecase;
@@ -769,12 +613,8 @@ app.put("/api/insertpostupadte", (req, res) => {
   const Collar = req.body.Collar;
   const colorPost = req.body.colorPost;
   const stylePost = req.body.stylePost;
-
-
   const idpost = req.body.idpost;
-
   console.log(idpost, Prcado, Price, Done, Saction);
-
   const tasks = 'UPDATE posts SET Saction="' + Saction + '", Kind="' + Kind + '", Cdlass="' + Cdlass + '",usecase= "' + usecase + '",season="' + season + '",pattren="' + pattren + '",Collar="' + Collar + '" ,stylePost="' + stylePost + '" ,colorPost="' + colorPost + '" , Yurs="' + Yurs + '" ,country="' + country + '",codcountry="' + codcountry + '" , City="' + City + '" , Done="' + Done + '", Description="' + Description + '" , Prcado="' + Prcado + '" , Price="' + Price + '" , Phone="' + Phone + '"  WHERE idpost="' + idpost + '"'
   db.query(tasks, (err, result) => {
 
@@ -881,7 +721,7 @@ app.put("/api/inserteditimag", uploads.single('profile'), (req, res) => {
 //       res.send(result).status(200);
 //       //  console.log(result);
 
-//       const http = 'http://10.10.59.7:8180/upload/';
+//   
 
 
 //     } else {
@@ -926,7 +766,6 @@ app.get('/api/getpostORDERSaction', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -954,7 +793,6 @@ app.get('/api/getpostORDERCdlass', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -982,7 +820,6 @@ app.get('/api/getpostORDERkind', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1010,7 +847,6 @@ app.get('/api/getpostORDERYurs', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1039,7 +875,6 @@ app.get('/api/getpostORDERcountry', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1067,7 +902,6 @@ app.get('/api/getpostORDERCity', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1095,7 +929,6 @@ app.get('/api/getpostORDERPrcant', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1124,7 +957,6 @@ app.get('/api/getpostORDERTime', (req, res) => {
       res.send(result).status(200);
       //  console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1151,7 +983,6 @@ app.get("/api/postsimag", (req, res) => {
       res.send(result).status(200);
 
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1340,7 +1171,6 @@ app.get('/api/favoritlik', (req, res) => {
       res.send(result).status(200);
       console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1401,7 +1231,6 @@ app.post('/api/viewpostpos', (req, res) => {
       res.send(result).status(200);
       console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1423,7 +1252,6 @@ app.get('/api/viewpost', (req, res) => {
       res.send(result).status(200);
       console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1470,7 +1298,6 @@ app.get('/api/followerget', (req, res) => {
       res.send(result).status(200);
       console.log(result);
 
-      const http = 'http://10.10.59.7:8180/upload/';
 
 
     } else {
@@ -1636,24 +1463,24 @@ io.on('connection', (Socket) => {
 
 
 
-server.listen(port, () => {
-  const testFolder = './upload/';
+// server.listen(port, () => {
+//   const testFolder = './upload/';
 
-  //   // const search =req.body.search
-  //   const search ='سلاح'
-  //   const post = "SELECT * FROM posts WHERE Saction LIKE '%"+search+"%' OR Kind LIKE '%"+search+"%' OR Cdlass LIKE '%"+search+"%' OR usecase LIKE '%"+search+"%' OR Prcant LIKE '%search%' OR Yurs LIKE '%"+search+"%' OR country LIKE '%"+search+"%' OR City LIKE '%"+search+"%' OR Description LIKE '%"+search+"%' OR Prcado LIKE '%"+search+"%' OR Price LIKE '%"+search+"%' OR Phone LIKE '%"+search+"%'";
+//   //   // const search =req.body.search
+//   //   const search ='سلاح'
+//   //   const post = "SELECT * FROM posts WHERE Saction LIKE '%"+search+"%' OR Kind LIKE '%"+search+"%' OR Cdlass LIKE '%"+search+"%' OR usecase LIKE '%"+search+"%' OR Prcant LIKE '%search%' OR Yurs LIKE '%"+search+"%' OR country LIKE '%"+search+"%' OR City LIKE '%"+search+"%' OR Description LIKE '%"+search+"%' OR Prcado LIKE '%"+search+"%' OR Price LIKE '%"+search+"%' OR Phone LIKE '%"+search+"%'";
   
-  //   db.query(post,(err,reslt)=>{
-  //     console.log(reslt)
+//   //   db.query(post,(err,reslt)=>{
+//   //     console.log(reslt)
  
 
     
-  //   //'SELECT * FROM posts ORDER BY Kind DESC'
-  // })
+//   //   //'SELECT * FROM posts ORDER BY Kind DESC'
+//   // })
   
 
-  fs.readdirSync(testFolder).forEach(file => {
-    // console.log(file);
-  });
-  console.log(`server running at http://10.10.59.3:${port}/`);
-});
+//   fs.readdirSync(testFolder).forEach(file => {
+//     // console.log(file);
+//   });
+//   console.log(`server running at http://10.10.59.3:${port}/`);
+// });
